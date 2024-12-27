@@ -1,0 +1,66 @@
+---
+- name: Azure DevOps self-hosted agent configuration
+  hosts: myagent
+  become: yes
+
+  vars:
+    azure_devops_url: "https://dev.azure.com/nishant-organization"
+    pat_token: "BSpggUpgYP3xQPI4p7qptT6MK1NcNHypUakWChkPriw069iuiWzBJQQJ99ALACAAAAAqMdA8AAASAZDOklep"
+    agent_pool: "NishantAgent"
+    agent_name: "myagent"
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - curl
+        - unzip
+
+    - name: Download Az DevOps Agent
+      get_url:
+        url: https://vstsagentpackage.azureedge.net/agent/4.248.0/vsts-agent-linux-x64-4.248.0.tar.gz
+        dest: /tmp/vsts-agent.tar.gz
+
+    - name: Create agent directory
+      file:
+        path: /opt/azuredevops/agent
+        state: directory
+
+    - name: Extract Azure DevOps agent
+      unarchive:
+        src: /tmp/vsts-agent.tar.gz
+        dest: /opt/azuredevops/agent
+        remote_src: yes
+
+    - name: Configure Azure DevOps Agent
+      command: ./config.sh --unattended --url {{ azure_devops_url }} --auth pat --token {{ pat_token }} --pool {{ agent_pool }} --agent {{ agent_name }}
+      args:
+        chdir: /opt/azuredevops/agent
+      become: no
+
+    - name: Create systemd service file
+      copy:
+        dest: /etc/systemd/system/vsts.agent.{{ agent_pool }}.{{ agent_name }}.service
+        content: |
+          [Unit]
+          Description=Azure DevOps Agent ({{ agent_name }})
+          After=network.target
+
+          [Service]
+          ExecStart=sudo /opt/azuredevops/agent/svc.sh start
+          User=azureuser
+          WorkingDirectory=/opt/azuredevops/agent
+          KillMode=process
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd daemon
+      command: sudo systemctl daemon-reload
+
+    - name: Enable and start agent service
+      command: sudo systemctl enable --now vsts.agent.{{ agent_pool }}.{{ agent_name }}.service
+      
