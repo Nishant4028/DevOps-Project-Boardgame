@@ -1,0 +1,121 @@
+
+trigger:
+ paths:
+   include:
+     - terraform-manifests/*
+
+pool:
+  name: NishantAgent
+  demands:
+  - agent.name -equals myagent1
+
+          
+variables:
+- name: DEV_ENVIRONMENT
+  value: dev
+
+stages:
+  - stage: TerraformValidate
+    jobs:
+      - job: TerraformValidateJob
+        continueOnError: false
+        steps:
+          - script: sudo apt-get update && sudo apt-get install -y unzip
+            displayName: 'Install unzip'
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Artifacts
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/terraform-manifests'
+              artifact: 'terraform-manifests-out'
+              publishLocation: 'pipeline'
+          - task: TerraformInstaller@1
+            displayName: Terraform install
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTaskV4@4
+            displayName: Terraform Init
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-manifests'
+              backendServiceArm: 'terraform-aks-azurerm-svc-con'
+              backendAzureRmResourceGroupName: 'az-devops-agent'
+              backendAzureRmStorageAccountName: 'nishant1231'
+              backendAzureRmContainerName: 'tfstatefiles'
+              backendAzureRmKey: 'aks-base.tfstate'
+              commandOptions: '-reconfigure'
+          - task: TerraformTaskV4@4
+            displayName: Terraform Validate
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-manifests'
+          
+  - stage: DeployAKSClusters
+    jobs:
+      - deployment: DeployDevAKSCluster
+        displayName: DeployDevAKSCluster
+        pool:
+          name: NishantAgent
+          demands:
+          - agent.name -equals myagent1
+        environment: $(DEV_ENVIRONMENT)
+        strategy:
+         runOnce:
+           deploy:
+             steps:
+              - task: DownloadSecureFile@1
+                displayName: Download SSH key
+                name: sshkey
+                inputs:
+                  secureFile: 'aks-terraform-devops-ssh-key-ububtu.pub'
+              - task: TerraformTaskV4@4
+                displayName: Terraform Init
+                inputs:
+                  provider: 'azurerm'
+                  command: 'init'
+                  workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
+                  backendServiceArm: 'terraform-aks-azurerm-svc-con'
+                  backendAzureRmResourceGroupName: 'az-devops-agent'
+                  backendAzureRmStorageAccountName: 'nishant1231'
+                  backendAzureRmContainerName: 'tfstatefiles'
+                  backendAzureRmKey: 'aks-$(DEV_ENVIRONMENT).tfstate'
+                  commandOptions: '-reconfigure'
+              
+              - task: TerraformTaskV4@4
+                displayName: Terraform Plan
+                inputs:
+                  provider: 'azurerm'
+                  command: 'plan'
+                  workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
+                  commandOptions: '-var ssh_public_key=$(sshkey.secureFilePath) -var environment=$(DEV_ENVIRONMENT) -out $(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
+                  environmentServiceNameAzureRM: 'terraform-aks-azurerm-svc-con'
+                
+              - task: TerraformTaskV4@4
+                inputs:
+                  provider: 'azurerm'
+                  command: 'apply'
+                  workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
+                  commandOptions: '$(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
+                  environmentServiceNameAzureRM: 'terraform-aks-azurerm-svc-con'
+              - task: KubectlInstaller@0
+                inputs:
+                  kubectlVersion: 'latest'
+              
+              - task: AzureCLI@2
+                inputs:
+                  azureSubscription: 'terraform-aks-azurerm-svc-con'
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
+                    sudo az aks install-cli
+                    sudo curl -L -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
+                    sudo unzip kubelogin.zip -d /usr/local/bin
+                    sudo chmod +x /usr/local/bin/kubelogin
+              
+              - script: |
+                  kubectl create namespace argocd
+                  kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+                displayName: 'Install Argo CD'
+   
