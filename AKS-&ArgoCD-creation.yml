@@ -38,12 +38,12 @@ stages:
               provider: 'azurerm'
               command: 'init'
               workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-manifests'
-              backendServiceArm: 'terraform-aks-azurerm-svc-con'
+              commandOptions: '-reconfigure'
+              backendServiceArm: 'project-10-azure-conn'
               backendAzureRmResourceGroupName: 'az-devops-agent'
               backendAzureRmStorageAccountName: 'nishant1231'
               backendAzureRmContainerName: 'tfstatefiles'
               backendAzureRmKey: 'aks-base.tfstate'
-              commandOptions: '-reconfigure'
           - task: TerraformTaskV4@4
             displayName: Terraform Validate
             inputs:
@@ -75,12 +75,12 @@ stages:
                   provider: 'azurerm'
                   command: 'init'
                   workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
-                  backendServiceArm: 'terraform-aks-azurerm-svc-con'
+                  commandOptions: '-reconfigure'
+                  backendServiceArm: 'project-10-azure-conn'
                   backendAzureRmResourceGroupName: 'az-devops-agent'
                   backendAzureRmStorageAccountName: 'nishant1231'
                   backendAzureRmContainerName: 'tfstatefiles'
                   backendAzureRmKey: 'aks-$(DEV_ENVIRONMENT).tfstate'
-                  commandOptions: '-reconfigure'
               
               - task: TerraformTaskV4@4
                 displayName: Terraform Plan
@@ -89,7 +89,7 @@ stages:
                   command: 'plan'
                   workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
                   commandOptions: '-var ssh_public_key=$(sshkey.secureFilePath) -var environment=$(DEV_ENVIRONMENT) -out $(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
-                  environmentServiceNameAzureRM: 'terraform-aks-azurerm-svc-con'
+                  environmentServiceNameAzureRM: 'project-10-azure-conn'
                 
               - task: TerraformTaskV4@4
                 inputs:
@@ -97,14 +97,14 @@ stages:
                   command: 'apply'
                   workingDirectory: '$(Pipeline.Workspace)/terraform-manifests-out'
                   commandOptions: '$(Pipeline.Workspace)/terraform-manifests-out/$(DEV_ENVIRONMENT)-$(Build.BuildId).out'
-                  environmentServiceNameAzureRM: 'terraform-aks-azurerm-svc-con'
+                  environmentServiceNameAzureRM: 'project-10-azure-conn'
               - task: KubectlInstaller@0
                 inputs:
                   kubectlVersion: 'latest'
               
               - task: AzureCLI@2
                 inputs:
-                  azureSubscription: 'terraform-aks-azurerm-svc-con'
+                  azureSubscription: 'project-10-azure-conn'
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
