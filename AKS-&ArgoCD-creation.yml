@@ -101,19 +101,7 @@ stages:
               - task: KubectlInstaller@0
                 inputs:
                   kubectlVersion: 'latest'
-              
-              - task: AzureCLI@2
-                inputs:
-                  azureSubscription: 'project-10-azure-conn'
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  inlineScript: |
-                    az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
-                    sudo az aks install-cli
-                    sudo curl -L -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
-                    sudo unzip kubelogin.zip -d /usr/local/bin
-                    sudo chmod +x /usr/local/bin/kubelogin
-              
+                
               - script: |
                   kubectl create namespace argocd
                   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
