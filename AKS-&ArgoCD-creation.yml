@@ -108,7 +108,7 @@ stages:
                 displayName: 'Install Argo CD'
               
               - script: |                
-                    az aks get-credentials -n "cluster-definite-seahorse" -g "rg-hip-urchin"
+                    az aks show --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
                     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
                     helm repo update
                     helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
