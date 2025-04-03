@@ -122,7 +122,12 @@ stages:
                   scriptLocation: 'inlineScript'
                   inlineScript: |
                     az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
+                displayName: 'Get AKS Credentials'
               - script: |
-                  kubectl create namespace argocd
+                  kubectl create namespace argocd || true
                   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
                 displayName: 'Install Argo CD'
+              - script: |
+                  kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -w
+                  kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server | grep Running
+                displayName: 'Verify Argo CD Installation'
