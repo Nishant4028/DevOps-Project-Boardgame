@@ -65,13 +65,13 @@ stages:
                 name: sshkey
                 inputs:
                   secureFile: 'aks-terraform-devops-ssh-key-ububtu.pub'
-              - task: DownloadPipelineArtifact@2 # Add this task
+              - task: DownloadPipelineArtifact@2
                 displayName: 'Download Artifact'
                 inputs:
                   buildType: 'current'
                   artifactName: 'terraform-manifests-out'
                   targetPath: '$(Pipeline.Workspace)'
-              - task: TerraformInstaller@1 # Add this task
+              - task: TerraformInstaller@1
                 displayName: Terraform install
                 inputs:
                   terraformVersion: 'latest'
@@ -108,18 +108,15 @@ stages:
               - script: |
                   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
                 displayName: 'Install Azure CLI'
-  
               - script: |
                   sudo curl -L --no-cache-dir -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
                   sudo unzip kubelogin.zip -d /usr/local/bin/bin
                   sudo mv /usr/local/bin/bin/linux_amd64/kubelogin /usr/local/bin/
                   sudo chmod +x /usr/local/bin/kubelogin
-                displayName: 'Install Kubelogin' 
+                displayName: 'Install Kubelogin'
               - script: |
-                  kubectl config unset clusters.terraform-aks-dev-cluster || true
-                  kubectl config unset contexts.terraform-aks-dev-cluster || true
-                  kubectl config unset users.terraform-aks-dev-cluster || true
-                displayName: 'Remove Existing Kubeconfig Entry (if any)'                  
+                  kubectl config unset users.clusterUser_terraform-aks-dev_terraform-aks-dev-cluster || true
+                displayName: 'Remove Existing Kubeconfig User Entry (if any)'
               - task: AzureCLI@2
                 inputs:
                   azureSubscription: 'devops-to-azure'
@@ -129,9 +126,11 @@ stages:
                     az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
                 displayName: 'Get AKS Credentials'
               - script: |
+                  kubectl apply -f k8s-manifests/argocd-clusterrole.yaml
+                  kubectl apply -f k8s-manifests/argocd-clusterrolebinding.yaml
                   kubectl create namespace argocd || true
                   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-                displayName: 'Install Argo CD'
+                displayName: 'Install Argo CD with RBAC'
               - script: |
                   kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -w
                   kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server | grep Running
