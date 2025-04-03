@@ -110,9 +110,10 @@ stages:
                 displayName: 'Install Azure CLI'
               - script: |
                   sudo curl -L -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
-                  sudo unzip kubelogin.zip -d /usr/local/bin
+                  sudo unzip kubelogin.zip -d /usr/local/bin/bin
+                  sudo mv /usr/local/bin/bin/linux_amd64/kubelogin /usr/local/bin/
                   sudo chmod +x /usr/local/bin/kubelogin
-                displayName: 'Install Kubelogin'
+                displayName: 'Install Kubelogin'                   
               - task: AzureCLI@2
                 inputs:
                   azureSubscription: 'devops-to-azure'
