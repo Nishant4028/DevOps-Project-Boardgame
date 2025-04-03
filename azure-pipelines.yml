@@ -126,6 +126,6 @@ stages:
                     az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
                 displayName: 'Get AKS Credentials'
               - script: |
-                  kubectl create namespace argocd || true
+                  kubectl create namespace argocd
                   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-                displayName: 'Install Argo CD with RBAC'
+                displayName: 'Install Argo CD'
