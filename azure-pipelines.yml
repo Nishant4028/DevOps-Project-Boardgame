@@ -120,7 +120,7 @@ stages:
                   scriptType: 'bash'
                   scriptLocation: 'inlineScript'
                   inlineScript: |
-                    az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-nsg
+                    az aks get-credentials --resource-group terraform-aks-dev --name terraform-aks-dev-cluster
               - script: |
                   kubectl create namespace argocd
                   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
