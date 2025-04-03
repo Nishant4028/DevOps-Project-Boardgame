@@ -108,8 +108,9 @@ stages:
               - script: |
                   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
                 displayName: 'Install Azure CLI'
+  
               - script: |
-                  sudo curl -L -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
+                  sudo curl -L --no-cache-dir -o kubelogin.zip https://github.com/Azure/kubelogin/releases/latest/download/kubelogin.zip
                   sudo unzip kubelogin.zip -d /usr/local/bin/bin
                   sudo mv /usr/local/bin/bin/linux_amd64/kubelogin /usr/local/bin/
                   sudo chmod +x /usr/local/bin/kubelogin
